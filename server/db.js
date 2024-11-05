@@ -18,11 +18,12 @@ const Document = mongoose.model('Document', documentSchema);
 // Função para verificar se o documento já foi enviado
 export async function documentExists(documentHash) {
     const document = await Document.findOne({ documentHash });
-    return document !== null;
+    return document !== null; // Retorna true se o documento existir, false caso contrário
 }
 
 // Função para salvar o documento no banco de dados
 export async function saveDocument(documentHash) {
     const document = new Document({ documentHash });
     await document.save();
+    console.log("Documento salvo no banco de dados com hash:", documentHash); // Log após salvar
 }
