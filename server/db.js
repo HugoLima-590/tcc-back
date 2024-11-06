@@ -13,12 +13,20 @@ const documentSchema = new mongoose.Schema({
     timestamp: { type: Date, default: Date.now }
 });
 
-const Document = mongoose.model('Document', documentSchema);
+export const Document = mongoose.model('Document', documentSchema);
 
 // Função para verificar se o documento já foi enviado
 export async function documentExists(documentHash) {
-    const document = await Document.findOne({ documentHash });
-    return document !== null; // Retorna true se o documento existir, false caso contrário
+    // Verifica primeiro no MongoDB
+    console.log(documentHash)
+    const documentInDB = await Document.findOne({ documentHash: documentHash });
+    console.log(JSON.stringify(documentInDB))
+    if (documentInDB) {
+        console.log("Documento encontrado no MongoDB.");
+        return true;
+    }
+    console.log("Documento não encontrado em MongoDB.");
+    return false;
 }
 
 // Função para salvar o documento no banco de dados

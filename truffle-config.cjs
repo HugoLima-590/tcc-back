@@ -10,7 +10,7 @@ module.exports = {
   },
   networks: {
     development: {
-      host: "127.0.0.1", // Ganache CLI padrão
+      host: "192.168.1.110", // Ganache CLI padrão
       port: 7545,        // Ganache CLI padrão
       network_id: "*",   // Conecta a qualquer rede
     },

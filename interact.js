@@ -1,38 +1,44 @@
 import Web3 from 'web3';
-import { documentExists, saveDocument } from './server/db.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { saveDocument } from './server/db.js'; // Assegure-se de que o caminho está correto
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+console.log("Iniciando o script integrado com o sistema...");
 
 // Carregar o arquivo JSON do contrato
 const contractPath = path.resolve(__dirname, 'build', 'contracts', 'DocumentStore.json');
 const contract = JSON.parse(fs.readFileSync(contractPath, 'utf8'));
 
 // Configuração do Web3
-const web3 = new Web3('http://127.0.0.1:7545');
-
-const contractAddress = '0x6bdAA297B3e7E271b9793C6d20d5C7083A678b14'; 
+const web3 = new Web3('http://192.168.1.110:7545');
+const contractAddress = '0xee57dA7317E3eF4EA367a7C0A0077440994bb479'; 
 const contractABI = contract.abi;
-
 const documentStore = new web3.eth.Contract(contractABI, contractAddress);
 
-// Função para verificar a conexão com o Ganache
-async function checkConnection() {
+// Função para verificar se o documento já existe
+async function verifyDocument(documentHash) {
     try {
-        const isListening = await web3.eth.net.isListening();
-        if (isListening) {
-            console.log('Web3 está conectado ao Ganache');
+        const result = await documentStore.methods.verifyDocument(documentHash).call();
+        if (result[0] === true) {
+            console.log('Documento verificado. Timestamp:', result[1]);
+            return true;
+        } else {
+            console.log('Documento não encontrado.');
+            return false;
         }
     } catch (error) {
-        console.error('Erro de conexão com Ganache:', error);
+        console.error('Erro ao verificar documento:', error);
+        return false;
     }
 }
 
 // Função para adicionar um documento (hash)
 async function addDocument(documentHash) {
+    console.log("Tentando adicionar documento...");
     const accounts = await web3.eth.getAccounts();
     try {
         const receipt = await documentStore.methods.addDocument(documentHash).send({ from: accounts[0], gas: 6721975 });
@@ -43,42 +49,22 @@ async function addDocument(documentHash) {
     }
 }
 
-
-// Função para verificar se o documento existe
-async function verifyDocument(documentHash) {
-    try {
-        const result = await documentStore.methods.verifyDocument(documentHash).call();
-        if (result[0]) {
-            console.log('Documento verificado. Timestamp:', result[1]);
-        } else {
-            console.log('Documento não encontrado.');
-        }
-    } catch (error) {
-        console.error('Erro ao verificar documento:', error);
-    }
-}
-
 // Receber o hash do argumento
-const documentHash = process.argv[2]; 
+const documentHash = process.argv[2];
 
 (async () => {
-    await checkConnection();
-    
     // Verifica se o documento já foi enviado
-    const exists = await documentExists(documentHash);
+    const exists = await verifyDocument(documentHash);
     if (exists) {
         console.log('Este documento já foi enviado ao blockchain. Processo abortado.');
         return; 
     }
 
-    // Adiciona o documento
+    // Adiciona o documento no blockchain (se necessário) e no MongoDB
     await addDocument(documentHash);
     console.log("Adicionando documento com hash:", documentHash);
-    
+
     // Salva o documento no banco de dados
     await saveDocument(documentHash);
-console.log("Documento salvo no banco de dados com hash:", documentHash);
-    
-    // Verifica o documento
-    await verifyDocument(documentHash);
+    console.log("Documento salvo no banco de dados com hash:", documentHash);
 })();
